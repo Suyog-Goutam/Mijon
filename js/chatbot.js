@@ -460,12 +460,14 @@ Our hair specialists will assess your hair loss stage and recommend the best app
             }
         });
 
-        // Auto-open after 12 seconds if not opened
-        setTimeout(() => {
-            if (!isOpen) {
-                openChat();
+        // Handle click outside to close
+        document.addEventListener('click', (e) => {
+            if (isOpen && 
+                !chatWindow.contains(e.target) && 
+                !trigger.contains(e.target)) {
+                closeChat();
             }
-        }, 12000);
+        });
     }
 
     // ─── UTILS ───────────────────────────────────────────────────────────────────
