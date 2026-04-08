@@ -1469,11 +1469,11 @@ if (isset($_GET['logout'])) {
                 let ttMatch = embedCode.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
                 
                 if (ttMatch && ttMatch[1]) {
-                    // loop=1 is currently the best way to prevent the discovery end-screen on TikTok
-                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '?loop=1" width="100%" height="600" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    // loop=1 + rel=0 + scrolling="no" to ensure clean look and looping
+                    embedCode = '<iframe src="https://www.tiktok.com/@user/video/' + ttMatch[1] + '?loop=1&rel=0" width="100%" height="600" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else if (ytMatch && ytMatch[1]) {
                     // rel=0 ensures it doesn't show videos from other channels at the end
-                    embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else {
                     showToast('Could not auto-detect video player. Please paste the full HTML Embed Code instead.', 'error');
                     return;
@@ -1580,13 +1580,9 @@ if (isset($_GET['logout'])) {
                 card.id = `blog-post-${index}`;
                 card.className = 'blog-post ' + (blog.reverse ? 'reverse' : '');
                 
-                const mediaContent = blog.mediaType === 'embed' ? 
-                    blog.image : // raw HTML
-                    `<img src="${escapeHtml(blog.image)}" alt="Blog Image" class="blog-img" id="blog-img-display-${index}">`;
-                
                 card.innerHTML = `
                     <div class="blog-img-wrapper">
-                        ${mediaContent}
+                        ${blog.mediaType === 'embed' ? blog.image.replace('<iframe', '<iframe scrolling="no"') : `<img src="${escapeHtml(blog.image)}" class="blog-img" alt="${escapeHtml(blog.title)}">`}
                         <div class="img-upload-overlay" onclick="openMediaModal(${index})">
                             <i class="fa-solid fa-cloud-arrow-up fa-2x"></i>
                             <span>Change Media (Upload or Embed)</span>
