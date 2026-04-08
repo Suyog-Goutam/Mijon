@@ -1469,9 +1469,11 @@ if (isset($_GET['logout'])) {
                 let ttMatch = embedCode.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
                 
                 if (ttMatch && ttMatch[1]) {
-                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '" width="100%" height="600" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    // loop=1 is currently the best way to prevent the discovery end-screen on TikTok
+                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '?loop=1" width="100%" height="600" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else if (ytMatch && ytMatch[1]) {
-                    embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    // rel=0 ensures it doesn't show videos from other channels at the end
+                    embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else {
                     showToast('Could not auto-detect video player. Please paste the full HTML Embed Code instead.', 'error');
                     return;
