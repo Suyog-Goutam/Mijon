@@ -1,0 +1,23 @@
+# Logs and data files
+*.txt
+*.json
+!blogs.json
+!manifest.json
+
+# System / Tool files
+implementation_plan.md
+task.md
+walkthrough.md
+recover.py
+update_css.py
+*.pyc
+__pycache__/
+
+# IDE files
+.vscode/
+.idea/
+.DS_Store
+
+# Temporary files
+/tmp/
+.gemini/
