@@ -93,6 +93,15 @@ if (isset($_GET['logout'])) {
         .btn-submit:hover { background: var(--color-primary-light); transform: translateY(-1px); box-shadow: 0 6px 12px rgba(15, 23, 42, 0.25); }
         .error-msg { background: #FEF2F2; color: #DC2626; padding: 1rem; border-radius: 8px; font-size: 0.9rem; margin-bottom: 1.5rem; border: 1px solid #F87171; text-align: center; font-weight: 500; }
 
+        /* Save Status Indicator */
+        .save-status {
+            transition: all 0.3s ease;
+            opacity: 0.7;
+        }
+        .save-status.saving { color: var(--color-accent); opacity: 1; }
+        .save-status.saved { color: #10B981; opacity: 1; }
+        .save-status.error { color: #EF4444; opacity: 1; }
+
         /* =========================================
            DASHBOARD LAYOUT 
            ========================================= */
@@ -829,12 +838,16 @@ if (isset($_GET['logout'])) {
                             <button class="btn-toggle-edit" onclick="addNewBlog()" id="btn-add-blog" style="background: #10B981; border: none;">
                                 <i class="fa-solid fa-plus"></i> Add Blog
                             </button>
-                            <button class="btn-toggle-edit" onclick="toggleEditMode()" id="btn-toggle-edit">
-                                <i class="fa-solid fa-pen-to-square"></i> Enable Editing
-                            </button>
-                            <button class="btn-save-blog" onclick="saveAllBlogs()" id="global-save-btn">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> Save All Changes
-                            </button>
+                                         <div class="header-right">
+                    <div id="save-status" class="save-status" style="margin-right: 1.5rem; font-size: 0.85rem; font-weight: 500; color: var(--color-text-muted); display: flex; align-items: center; gap: 0.5rem;"></div>
+                    <button class="action-btn btn-primary" id="btn-toggle-edit" onclick="toggleEditMode()">
+                        <i class="fa-solid fa-pen-to-square"></i> Enable Editing
+                    </button>
+                    <button class="action-btn btn-accent" id="global-save-btn" onclick="saveAllBlogs()" style="margin-left: 10px;">
+                        <i class="fa-solid fa-floppy-disk"></i> Save All Changes
+                    </button>
+                </div>
+                        </button>
                         </div>
                     </div>
 
@@ -1421,6 +1434,57 @@ if (isset($_GET['logout'])) {
         // ---- Blog Editor Logic ----
         let cachedBlogs = [];
         let isEditMode = false;
+        let autoSaveTimeout = null;
+
+        // Debounce helper to prevent excessive API calls
+        function debounce(func, delay) {
+            return function(...args) {
+                clearTimeout(autoSaveTimeout);
+                autoSaveTimeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // Auto-save function
+        const triggerAutoSave = debounce(async () => {
+            if (!isEditMode || cachedBlogs.length === 0) return;
+            
+            const statusEl = document.getElementById('save-status');
+            statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Auto-saving...';
+            statusEl.className = 'save-status saving';
+
+            // Sync the latest DOM content to cachedBlogs before saving
+            syncContentToCache();
+
+            try {
+                const response = await fetch('api/save_blogs.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cachedBlogs)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    statusEl.innerHTML = '<i class="fa-solid fa-cloud-check"></i> All changes saved';
+                    statusEl.className = 'save-status saved';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Save failed';
+                statusEl.className = 'save-status error';
+            }
+        }, 2000);
+
+        function syncContentToCache() {
+            cachedBlogs.forEach((blog, index) => {
+                const titleEl = document.getElementById(`blog-title-${index}`);
+                const dateEl = document.getElementById(`blog-date-${index}`);
+                const tagEl = document.getElementById(`blog-tag-${index}`);
+                const contentEl = document.getElementById(`blog-content-${index}`);
+                
+                if (titleEl) blog.title = titleEl.innerText.trim();
+                if (dateEl) blog.date = dateEl.innerText.trim();
+                if (tagEl) blog.tag = tagEl.innerText.trim();
+                if (contentEl) blog.content = contentEl.innerHTML;
+            });
+        }
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
@@ -1470,7 +1534,7 @@ if (isset($_GET['logout'])) {
                 
                 if (ttMatch && ttMatch[1]) {
                     // MUST use /embed/v2/ format for TikTok to allow connections in iframes
-                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '?loop=1&rel=0" width="100%" height="600" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '?loop=1&autoplay=1&muted=1&rel=0" width="100%" height="600" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else if (ytMatch && ytMatch[1]) {
                     // rel=0 ensures it doesn't show videos from other channels at the end
                     embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
@@ -1590,11 +1654,11 @@ if (isset($_GET['logout'])) {
                     </div>
                     <div class="blog-content">
                         <div class="blog-meta">
-                            <div><i class="fa-regular fa-calendar" style="margin-right: 0.4rem;"></i><span class="editable-field" id="blog-date-${index}" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.date)}</span></div>
-                            <div><i class="fa-solid fa-tag" style="margin-right: 0.4rem;"></i><span class="editable-field" id="blog-tag-${index}" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.tag)}</span></div>
+                            <div><i class="fa-regular fa-calendar" style="margin-right: 0.4rem;"></i><span class="editable-field" id="blog-date-${index}" oninput="triggerAutoSave()" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.date)}</span></div>
+                            <div><i class="fa-solid fa-tag" style="margin-right: 0.4rem;"></i><span class="editable-field" id="blog-tag-${index}" oninput="triggerAutoSave()" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.tag)}</span></div>
                         </div>
-                        <h2 class="blog-title editable-field" id="blog-title-${index}" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.title)}</h2>
-                        <div class="blog-text editable-field" id="blog-content-${index}" ${isEditMode?'contenteditable="true"':'contenteditable="false"'} style="min-height: 100px;">
+                        <h2 class="blog-title editable-field" id="blog-title-${index}" oninput="triggerAutoSave()" ${isEditMode?'contenteditable="true"':'contenteditable="false"'}>${escapeHtml(blog.title)}</h2>
+                        <div class="blog-text editable-field" id="blog-content-${index}" oninput="triggerAutoSave()" ${isEditMode?'contenteditable="true"':'contenteditable="false"'} style="min-height: 100px;">
                             ${blog.content}
                         </div>
                     </div>

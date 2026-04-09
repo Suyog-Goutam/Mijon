@@ -439,8 +439,19 @@ Our hair specialists will assess your hair loss stage and recommend the best app
             trigger.classList.remove('open');
         }
 
-        trigger.addEventListener('click', () => { isOpen ? closeChat() : openChat(); });
-        closeBtn.addEventListener('click', closeChat);
+        trigger.addEventListener('click', (e) => { 
+            e.stopPropagation();
+            isOpen ? closeChat() : openChat(); 
+        });
+        
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeChat();
+        });
+
+        chatWindow.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
 
         sendBtn.addEventListener('click', () => {
             const val = input.value.trim();

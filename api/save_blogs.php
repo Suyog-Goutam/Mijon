@@ -20,6 +20,27 @@ if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded_data)) {
     exit;
 }
 
+// Security: Check if user is logged in (optional but recommended)
+session_start();
+if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit;
+}
+
+// Sanitize inputs to prevent SQL Injection (in future) and XSS
+foreach ($decoded_data as &$blog) {
+    $blog['title'] = htmlspecialchars(trim($blog['title'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $blog['date'] = htmlspecialchars(trim($blog['date'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $blog['tag'] = htmlspecialchars(trim($blog['tag'] ?? ''), ENT_QUOTES, 'UTF-8');
+    
+    // For content, we allow certain safe HTML tags for styling (b, i, u, p, ul, li, br, h2, h3)
+    if (isset($blog['content'])) {
+        $blog['content'] = strip_tags($blog['content'], '<b><i><u><p><ul><li><br><h2><h3><div>');
+    }
+}
+unset($blog);
+
 // Define the path to the blogs file
 $file_path = __DIR__ . '/../blogs.json';
 

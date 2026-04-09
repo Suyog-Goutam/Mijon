@@ -1,0 +1,23 @@
+# Deny access to sensitive data files
+<FilesMatch "\.(json|txt|log)$">
+    Order deny,allow
+    Deny from all
+</FilesMatch>
+
+# Allow public access to specific files if needed
+<Files "blogs.json">
+    # Note: We keep this denied to the public because we use the API to fetch it.
+    # The PHP server (api/*.php) can still read it from disk.
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Secure directory listings
+Options -Indexes
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
