@@ -1533,8 +1533,8 @@ if (isset($_GET['logout'])) {
                 let ttMatch = embedCode.match(/tiktok\.com\/@[\w.-]+\/video\/(\d+)/);
                 
                 if (ttMatch && ttMatch[1]) {
-                    // MUST use /embed/v2/ format for TikTok to allow connections in iframes
-                    embedCode = '<iframe src="https://www.tiktok.com/embed/v2/' + ttMatch[1] + '?loop=1&autoplay=1&muted=1&rel=0" width="100%" height="600" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+                    // MUST use /player/v1/ format for TikTok to support loop=1 and rel=0 properly
+                    embedCode = '<iframe src="https://www.tiktok.com/player/v1/' + ttMatch[1] + '?loop=1&autoplay=1&muted=1&rel=0" width="100%" height="600" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
                 } else if (ytMatch && ytMatch[1]) {
                     // rel=0 ensures it doesn't show videos from other channels at the end
                     embedCode = '<iframe width="100%" height="400" src="https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0" frameborder="0" scrolling="no" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';

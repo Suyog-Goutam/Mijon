@@ -333,9 +333,17 @@
                             mediaHtml = mediaHtml.replace('<iframe', '<iframe scrolling="no"');
                         }
                         // Force TikTok looping and autoplay parameters for older existing posts
-                        if (mediaHtml.includes('tiktok.com/embed/v2/')) {
+                        if (mediaHtml.includes('tiktok.com/')) {
+                            // Convert embed/v2 to player/v1 if present
+                            mediaHtml = mediaHtml.replace('tiktok.com/embed/v2/', 'tiktok.com/player/v1/');
+                            
                             if (!mediaHtml.includes('loop=1')) {
-                                mediaHtml = mediaHtml.replace(/\?/, '?loop=1&autoplay=1&muted=1&');
+                                // Handle both cases: with and without existing query parameters
+                                if (mediaHtml.includes('?')) {
+                                    mediaHtml = mediaHtml.replace(/\?/, '?loop=1&autoplay=1&muted=1&rel=0&');
+                                } else {
+                                    mediaHtml = mediaHtml.replace(/"$/, '?loop=1&autoplay=1&muted=1&rel=0"');
+                                }
                             }
                         }
                     }
