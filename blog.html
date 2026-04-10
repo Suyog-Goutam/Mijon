@@ -324,7 +324,14 @@
                     // Trigger animation manually since they are added dynamically
                     setTimeout(() => article.classList.add('visible'), 50 * index);
 
-                    let mediaHtml = blog.mediaType === 'embed' ? blog.image : `<img src="${blog.image}" class="blog-img" alt="${blog.title}">`;
+                    let mediaHtml = '';
+                    if (blog.mediaType === 'embed') {
+                        mediaHtml = blog.image;
+                    } else if (blog.mediaType === 'video') {
+                        mediaHtml = `<video src="${blog.image}" class="blog-img" controls style="object-fit:cover;"></video>`;
+                    } else {
+                        mediaHtml = `<img src="${blog.image}" class="blog-img" alt="${blog.title}">`;
+                    }
                     
                     // Enhancement for embedded media (TikTok/YouTube)
                     if (blog.mediaType === 'embed') {

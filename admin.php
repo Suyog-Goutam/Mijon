@@ -102,6 +102,80 @@ if (isset($_GET['logout'])) {
         .save-status.saved { color: #10B981; opacity: 1; }
         .save-status.error { color: #EF4444; opacity: 1; }
 
+        /* Full Screen Upload Progress Overlay */
+        #upload-progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            padding: 2rem;
+        }
+        .progress-box {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin: 2rem 0;
+            overflow: hidden;
+            position: relative;
+        }
+        #progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-accent), #34D399);
+            width: 0%;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 15px rgba(5, 150, 105, 0.5);
+        }
+        .progress-text {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+            margin-bottom: 0.5rem;
+        }
+        .progress-subtext {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .cancel-upload-btn {
+            background: rgba(239, 68, 68, 0.2);
+            color: #FCA5A5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.75rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0 auto;
+        }
+        .cancel-upload-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: white;
+            transform: translateY(-1px);
+        }
+
         /* =========================================
            DASHBOARD LAYOUT 
            ========================================= */
@@ -898,8 +972,9 @@ if (isset($_GET['logout'])) {
             <p>You can either upload an image directly, or paste an embed code (like a TikTok or YouTube iframe).</p>
             <input type="hidden" id="mediaTargetIndex">
             
-            <div class="modal-actions" style="margin-top: 1rem; margin-bottom: 1.5rem;">
-                <button class="modal-btn-confirm" onclick="triggerImageUploadFromModal()" style="background:var(--color-primary);"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Image</button>
+            <div class="modal-actions" style="margin-top: 1rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px;">
+                <button class="modal-btn-confirm" onclick="triggerImageUploadFromModal()" style="background:var(--color-primary); flex: 1; min-width: 160px;"><i class="fa-solid fa-image"></i> Upload Image</button>
+                <button class="modal-btn-confirm" onclick="triggerVideoUploadFromModal()" style="background:var(--color-accent); flex: 1; min-width: 160px;"><i class="fa-solid fa-video"></i> Upload Video</button>
             </div>
             
             <div style="text-align:center; font-weight:bold; color:var(--color-text-muted); margin-bottom: 1rem;">OR</div>
@@ -916,8 +991,24 @@ if (isset($_GET['logout'])) {
         </div>
     </div>
 
-    <!-- File Upload Input -->
+    <!-- File Upload Inputs -->
     <input type="file" id="hidden-file-input" accept="image/jpeg, image/png, image/webp, image/gif" style="display:none;">
+    <input type="file" id="hidden-video-input" accept="video/mp4, video/webm, video/ogg, video/quicktime" style="display:none;">
+
+    <!-- Upload Progress Overlay -->
+    <div id="upload-progress-overlay">
+        <div class="progress-box">
+            <div class="progress-text" id="upload-percentage">0%</div>
+            <div class="progress-subtext" id="upload-filename">Uploading video...</div>
+            <div class="progress-bar-container">
+                <div id="progress-bar-fill"></div>
+            </div>
+            <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.4);">Please do not close this tab or refresh the page.</p>
+            <button class="cancel-upload-btn" id="btn-cancel-upload">
+                <i class="fa-solid fa-xmark"></i> Cancel Upload
+            </button>
+        </div>
+    </div>
 
     <!-- EmailJS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -1522,6 +1613,99 @@ if (isset($_GET['logout'])) {
             input.click();
         }
 
+        function triggerVideoUploadFromModal() {
+            closeMediaModal();
+            const index = document.getElementById('mediaTargetIndex').value;
+            const input = document.getElementById('hidden-video-input');
+            input.dataset.targetIndex = index;
+            input.click();
+        }
+
+        let currentUploadXhr = null;
+
+        document.getElementById('btn-cancel-upload').addEventListener('click', function() {
+            if (currentUploadXhr) {
+                currentUploadXhr.abort();
+                hideUploadProgress();
+                showToast('Upload cancelled by user', 'error');
+            }
+        });
+
+        function showUploadProgress(fileName) {
+            const overlay = document.getElementById('upload-progress-overlay');
+            const fileNameEl = document.getElementById('upload-filename');
+            overlay.style.display = 'flex';
+            fileNameEl.textContent = 'Uploading: ' + fileName;
+            document.getElementById('upload-percentage').textContent = '0%';
+            document.getElementById('progress-bar-fill').style.width = '0%';
+        }
+
+        function hideUploadProgress() {
+            const overlay = document.getElementById('upload-progress-overlay');
+            overlay.style.display = 'none';
+            currentUploadXhr = null;
+        }
+
+        async function uploadVideo(file, targetIndex) {
+            showUploadProgress(file.name);
+            
+            const formData = new FormData();
+            formData.append('video', file);
+
+            const xhr = new XMLHttpRequest();
+            currentUploadXhr = xhr;
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    document.getElementById('upload-percentage').textContent = percentComplete + '%';
+                    document.getElementById('progress-bar-fill').style.width = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                hideUploadProgress();
+                if (xhr.status === 200) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        if(data.success) {
+                            cachedBlogs[targetIndex].mediaType = 'video';
+                            cachedBlogs[targetIndex].image = data.path; // Store video path in image field
+                            renderBlogEditor();
+                            showToast('Video uploaded successfully', 'success');
+                            triggerAutoSave();
+                        } else {
+                            showToast('Upload failed: ' + data.error, 'error');
+                        }
+                    } catch(e) {
+                        showToast('Error parsing server response', 'error');
+                    }
+                } else {
+                    showToast('Upload failed with status: ' + xhr.status, 'error');
+                }
+            };
+
+            xhr.onerror = function() {
+                hideUploadProgress();
+                showToast('Upload failed due to network error.', 'error');
+            };
+
+            xhr.onabort = function() {
+                hideUploadProgress();
+            };
+
+            xhr.open('POST', 'api/upload_video.php', true);
+            xhr.send(formData);
+        }
+
+        document.getElementById('hidden-video-input').addEventListener('change', function() {
+            const file = this.files[0];
+            if(!file) return;
+            const targetIndex = this.dataset.targetIndex;
+            uploadVideo(file, targetIndex);
+            this.value = ''; // Reset
+        });
+
         function confirmEmbedMedia() {
             const index = document.getElementById('mediaTargetIndex').value;
             let embedCode = document.getElementById('embedMediaInput').value.trim();
@@ -1644,9 +1828,18 @@ if (isset($_GET['logout'])) {
                 card.id = `blog-post-${index}`;
                 card.className = 'blog-post ' + (blog.reverse ? 'reverse' : '');
                 
+                let mediaDisplay = '';
+                if (blog.mediaType === 'embed') {
+                    mediaDisplay = blog.image.replace('<iframe', '<iframe scrolling="no"');
+                } else if (blog.mediaType === 'video') {
+                    mediaDisplay = `<video src="${escapeHtml(blog.image)}" class="blog-img" controls style="object-fit:cover;"></video>`;
+                } else {
+                    mediaDisplay = `<img src="${escapeHtml(blog.image)}" class="blog-img" alt="${escapeHtml(blog.title)}">`;
+                }
+
                 card.innerHTML = `
                     <div class="blog-img-wrapper">
-                        ${blog.mediaType === 'embed' ? blog.image.replace('<iframe', '<iframe scrolling="no"') : `<img src="${escapeHtml(blog.image)}" class="blog-img" alt="${escapeHtml(blog.title)}">`}
+                        ${mediaDisplay}
                         <div class="img-upload-overlay" onclick="openMediaModal(${index})">
                             <i class="fa-solid fa-cloud-arrow-up fa-2x"></i>
                             <span>Change Media (Upload or Embed)</span>
