@@ -328,7 +328,7 @@
                     if (blog.mediaType === 'embed') {
                         mediaHtml = blog.image;
                     } else if (blog.mediaType === 'video') {
-                        mediaHtml = `<video src="${blog.image}" class="blog-img" controls style="object-fit:cover;"></video>`;
+                        mediaHtml = `<video src="${blog.image}" class="blog-img" autoplay muted loop playsinline controls style="object-fit:cover;"></video>`;
                     } else {
                         mediaHtml = `<img src="${blog.image}" class="blog-img" alt="${blog.title}">`;
                     }

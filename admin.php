@@ -1832,7 +1832,7 @@ if (isset($_GET['logout'])) {
                 if (blog.mediaType === 'embed') {
                     mediaDisplay = blog.image.replace('<iframe', '<iframe scrolling="no"');
                 } else if (blog.mediaType === 'video') {
-                    mediaDisplay = `<video src="${escapeHtml(blog.image)}" class="blog-img" controls style="object-fit:cover;"></video>`;
+                    mediaDisplay = `<video src="${escapeHtml(blog.image)}" class="blog-img" autoplay muted loop playsinline controls style="object-fit:cover;"></video>`;
                 } else {
                     mediaDisplay = `<img src="${escapeHtml(blog.image)}" class="blog-img" alt="${escapeHtml(blog.title)}">`;
                 }
@@ -1865,11 +1865,28 @@ if (isset($_GET['logout'])) {
             }
         }
 
-        function deleteBlog(index) {
-            if(confirm('Are you sure you want to delete this blog post?')) {
+        async function deleteBlog(index) {
+            if(confirm('Are you sure you want to delete this blog post? This will permanently remove its media (images/videos) from the server.')) {
+                const blog = cachedBlogs[index];
+                
+                // If it's a local file (not an embed), delete it from the server
+                if (blog.mediaType !== 'embed' && blog.image && (blog.image.startsWith('images/') || blog.image.startsWith('videos/'))) {
+                    try {
+                        await fetch('api/delete_media.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ path: blog.image })
+                        });
+                    } catch (e) {
+                        console.error('Failed to notify server of file deletion:', e);
+                    }
+                }
+
                 cachedBlogs.splice(index, 1);
                 renderBlogEditor();
-                showToast('Blog removed. Click "Save All Changes" to make it live.', 'success');
+                showToast('Blog and associated media removed.', 'success');
+                // Trigger auto-save to sync the blogs.json
+                triggerAutoSave();
             }
         }
 
