@@ -1592,6 +1592,8 @@ if (isset($_GET['logout'])) {
                 btn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Enable Editing';
                 document.querySelectorAll('.editable-field').forEach(el => el.setAttribute('contenteditable', 'false'));
             }
+            // Force re-render to show/hide conditional buttons (like Delete)
+            renderBlogEditor();
         }
 
         function openMediaModal(index) {
